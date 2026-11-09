@@ -31,4 +31,4 @@ A simple number guessing game built with vanilla HTML, CSS, and JavaScript. Try 
 
 ## Setup
 
-To run this project locally, simply open the `Guesser.html` file in your web browser.
+To run this project locally, open `index.html` in your web browser. The root `index.html` entry point also lets Vercel serve the game at the deployment URL without requiring a path to a separate HTML file.

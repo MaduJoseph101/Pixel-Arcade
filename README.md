@@ -1,4 +1,4 @@
-# Guesser Game
+# Pixel Arcade
 
 A simple number guessing game built with vanilla HTML, CSS, and JavaScript. Try to guess the secret number between 1 and 20 in just three tries!
 

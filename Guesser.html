@@ -1,31 +1,86 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#090d12">
+    <meta name="description" content="A quick solo number-guessing game. Find the hidden number in three tries.">
+    <link rel="preload" href="fonts/Nunito-latin.woff2" as="font" type="font/woff2">
     <link rel="stylesheet" href="Guesser.css">
-    <title>Guesser</title>
+    <title>Guess My Number | Pixel Arcade</title>
 </head>
 <body>
-    <main class="back">
+    <main class="arcade" aria-label="Guess My Number">
+        <section class="cabinet" aria-label="Guess My Number arcade cabinet">
+            <header class="cabinet__header">
+                <p class="cabinet__brand">PIXEL<span>ARCADE</span></p>
+            </header>
 
-        <button class="start">Start Game</button>
-        <div class="body">
-            <p>Guess my Number</p>
+            <div class="screen">
+                <section class="start-screen" id="start-screen" aria-labelledby="game-title">
+                    <div class="start-screen__layout">
+                        <div class="start-screen__content">
+                            <h1 class="game-title" id="game-title">GUESS<br><span>MY NUMBER</span></h1>
+                            <p class="start-screen__intro">Find the hidden number. You have three tries.</p>
 
-            <p class="hint">The number is between 1 and 20</p>
-            <p class="trials">Trials left: <span id="number"></span></p>
+                            <div class="game-specs" aria-label="Game rules">
+                                <p><span>RANGE</span><strong>01—20</strong></p>
+                                <p><span>TRIES</span><strong>03</strong></p>
+                                <p><span>MODE</span><strong>SOLO</strong></p>
+                            </div>
 
-            <input type="number" class="input" maxlength="3">
+                            <button class="button button--primary start" type="button">START GAME</button>
+                            <p class="start-screen__note">HIGHER / LOWER CLUES INCLUDED</p>
+                        </div>
 
-            <p class="value">Enter a number</p>
+                        <div class="mystery-display" aria-hidden="true">
+                            <span class="mystery-display__number">?</span>
+                            <span class="mystery-display__label">MYSTERY<br>NUMBER</span>
+                        </div>
+                    </div>
+                </section>
 
-            <button class="submit">submit</button>
-            <button class="restart">Restart</button>
-        </div>
+                <section class="game-screen" id="game-screen" aria-labelledby="gameplay-title" tabindex="-1" hidden>
+                    <div class="game-screen__content">
+                        <div class="game-screen__heading">
+                            <h2 id="gameplay-title">MAKE YOUR GUESS</h2>
+                            <div class="lives" aria-label="Attempts remaining">
+                                <span class="lives__label">TRIES LEFT</span>
+                                <span class="lives__hearts" id="lives-icons" aria-hidden="true">
+                                    <svg class="life-icon" viewBox="0 0 24 24" focusable="false"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg>
+                                    <svg class="life-icon" viewBox="0 0 24 24" focusable="false"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg>
+                                    <svg class="life-icon" viewBox="0 0 24 24" focusable="false"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/></svg>
+                                </span>
+                                <span class="visually-hidden" id="attempts-label"></span>
+                            </div>
+                        </div>
+
+                        <p class="game-screen__prompt">Pick a number from 1 to 20.</p>
+
+                        <form class="guess-form" novalidate>
+                            <label for="guess-input">YOUR NUMBER</label>
+                            <input
+                                type="number"
+                                class="input"
+                                id="guess-input"
+                                name="guess"
+                                min="1"
+                                max="20"
+                                step="1"
+                                inputmode="numeric"
+                                autocomplete="off"
+                                aria-describedby="guess-help"
+                            >
+                            <p class="value" id="guess-help" role="status" aria-live="polite" aria-atomic="true">Enter a whole number from 1 to 20.</p>
+                            <button class="button button--primary submit" type="submit">LOCK IN GUESS</button>
+                        </form>
+
+                        <button class="button button--secondary restart" type="button" hidden>PLAY AGAIN</button>
+                    </div>
+                </section>
+            </div>
+        </section>
     </main>
-
-
 
     <script src="Guesser.js"></script>
 </body>

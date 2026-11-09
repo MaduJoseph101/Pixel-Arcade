@@ -1,86 +1,122 @@
-// VARIABLES
-const hint = document.querySelector(".hint")
-const trial = document.querySelector(".trials")
-const number = document.getElementById("number")
-const input = document.querySelector(".input")
-const submit = document.querySelector(".submit")
-const restart = document.querySelector(".restart")
-const value = document.querySelector(".value")
-const start = document.querySelector(".start")
-const body = document.querySelector(".body")
-const exit = document.querySelector(".exit")
+const MAX_NUMBER = 20;
+const MAX_TRIES = 3;
 
-// GAME INTRO LOGIC
-start.addEventListener('click', ()=>{
-    body.classList.add("drop")
-    start.classList.add("away")
-})
+const ui = {
+  startScreen: document.getElementById("start-screen"),
+  gameScreen: document.getElementById("game-screen"),
+  start: document.querySelector(".start"),
+  form: document.querySelector(".guess-form"),
+  input: document.querySelector(".input"),
+  submit: document.querySelector(".submit"),
+  restart: document.querySelector(".restart"),
+  value: document.querySelector(".value"),
+  hearts: document.getElementById("lives-icons"),
+  attemptsLabel: document.getElementById("attempts-label"),
+};
 
+const state = {
+  select: 0,
+  attemptsLeft: MAX_TRIES,
+  isGameOver: false,
+};
 
-// RANDOMIZATION
-const options = ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20"]
+function getRandomNumber() {
+  return Math.floor(Math.random() * MAX_NUMBER) + 1;
+}
 
-let select = ""
+function setStatus(message, status = "default") {
+  ui.value.textContent = message;
+  ui.value.dataset.state = status;
+}
 
-select = Number(options[Math.floor(Math.random() * options.length)])
- 
-let trialLeft = ['❤','❤','❤']
-number.innerHTML = trialLeft.join(' ')
+function renderLives() {
+  ui.hearts.querySelectorAll(".life-icon").forEach((heart, index) => {
+    const isActive = index < state.attemptsLeft;
+    heart.classList.toggle("is-active", isActive);
+    heart.classList.toggle("is-lost", !isActive);
+  });
+  ui.attemptsLabel.textContent = `${state.attemptsLeft} ${state.attemptsLeft === 1 ? "try" : "tries"} remaining`;
+}
 
+function resetGame() {
+  state.select = getRandomNumber();
+  state.attemptsLeft = MAX_TRIES;
+  state.isGameOver = false;
 
-// SUBMIT FUNCTION
-submit.addEventListener('click', ()=>{
- 
-    const guess = Number(input.value)
+  ui.input.value = "";
+  ui.input.disabled = false;
+  ui.input.removeAttribute("aria-invalid");
+  ui.submit.disabled = false;
+  ui.submit.hidden = false;
+  ui.restart.hidden = true;
+  setStatus("Enter a whole number from 1 to 20.");
+  renderLives();
+}
 
-      if(input.value.trim() === ""){
-        value.innerHTML = "No number detected ✋"
-        return;
-    }
-    
-      if (guess === select) {
-        value.innerHTML = "You won 😁"
-        input.disabled = true;
-        submit.classList.add("remove")
-        restart.classList.add("add")
-        return;
-    }
+function endGame(won) {
+  state.isGameOver = true;
+  ui.input.disabled = true;
+  ui.submit.disabled = true;
+  ui.submit.hidden = true;
+  ui.restart.hidden = false;
 
-     if (guess >= 21 || guess <= 0){
-        value.innerHTML = "Your input is beyond the range"
-        return;
-    }
+  if (won) {
+    setStatus("YOU GOT IT! Nice shot.", "success");
+    return;
+  }
 
-    trialLeft.pop();
-    number.innerHTML = trialLeft.join(' ');
-    
-    if (trialLeft.length === 0) {
-        number.innerHTML = '😖';
-        value.innerHTML = "You lose! The number was " + select;
-        input.disabled = true;
-        submit.classList.add("remove");
-        restart.classList.add("add");
-    }
-    
-    else if (guess < select) {
-        value.innerHTML = "Your Number is less than mine 🙊";
-    }
-    
-    else { 
-        value.innerHTML = "Your Number is greater than mine 👀";
-    }
-})
+  ui.attemptsLabel.textContent = "No tries remaining";
+  setStatus(`OUT OF TRIES. The number was ${state.select}.`, "error");
+}
 
-// RESTART FUNCTION
-restart.addEventListener("click", ()=>{
-    value.innerHTML = "Enter a value"
+function startGame() {
+  resetGame();
+  ui.startScreen.hidden = true;
+  ui.gameScreen.hidden = false;
+  ui.input.focus();
+}
 
-    input.value = ""
-    input.disabled = false;
-    select = Number(options[Math.ceil(Math.random() * options.length)])
-    submit.classList.remove("remove")
-    restart.classList.remove("add")
+ui.start.addEventListener("click", startGame);
 
-    trialLeft = ['❤','❤','❤']
-    number.innerHTML = trialLeft.join(' ')
-})
+ui.form.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  if (state.isGameOver) {
+    return;
+  }
+
+  const rawGuess = ui.input.value.trim();
+  const guess = Number(rawGuess);
+
+  if (rawGuess === "" || !Number.isInteger(guess) || guess < 1 || guess > MAX_NUMBER) {
+    ui.input.setAttribute("aria-invalid", "true");
+    setStatus("Enter a whole number from 1 to 20.", "error");
+    ui.input.focus();
+    return;
+  }
+
+  ui.input.removeAttribute("aria-invalid");
+
+  if (guess === state.select) {
+    endGame(true);
+    return;
+  }
+
+  state.attemptsLeft -= 1;
+  renderLives();
+
+  if (state.attemptsLeft === 0) {
+    endGame(false);
+    return;
+  }
+
+  const clue = guess < state.select
+    ? "Too low. Try a higher number."
+    : "Too high. Try a lower number.";
+  setStatus(clue, "clue");
+});
+
+ui.restart.addEventListener("click", () => {
+  resetGame();
+  ui.input.focus();
+});

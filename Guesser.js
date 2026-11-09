@@ -1,5 +1,6 @@
 const MAX_NUMBER = 20;
 const MAX_TRIES = 3;
+const RECORDS_KEY = "pixelArcadeRecords";
 
 const ui = {
   startScreen: document.getElementById("start-screen"),
@@ -14,6 +15,14 @@ const ui = {
   attemptsLabel: document.getElementById("attempts-label"),
   possibleRange: document.getElementById("possible-range"),
   guessHistory: document.getElementById("guess-history"),
+  result: document.getElementById("result-panel"),
+  resultTitle: document.getElementById("result-title"),
+  resultNumber: document.getElementById("result-number"),
+  resultMessage: document.getElementById("result-message"),
+  resultConfetti: document.getElementById("result-confetti"),
+  bestScore: document.getElementById("best-score"),
+  winStreak: document.getElementById("win-streak"),
+  recordsStatus: document.getElementById("records-status"),
 };
 
 const state = {
@@ -23,6 +32,8 @@ const state = {
   lowestPossible: 1,
   highestPossible: MAX_NUMBER,
   guesses: [],
+  bestScore: null,
+  winStreak: 0,
 };
 
 function getRandomNumber() {
@@ -63,6 +74,83 @@ function renderRoundInfo() {
   });
 }
 
+function renderRecords() {
+  ui.bestScore.textContent = state.bestScore === null ? "—" : String(state.bestScore);
+  ui.winStreak.textContent = String(state.winStreak);
+}
+
+function showRecordsWarning() {
+  ui.recordsStatus.textContent = "Personal records may not be saved in this browser.";
+  ui.recordsStatus.hidden = false;
+}
+
+function loadRecords() {
+  try {
+    const savedRecords = window.localStorage.getItem(RECORDS_KEY);
+    if (savedRecords === null) {
+      return;
+    }
+
+    const records = JSON.parse(savedRecords);
+    const validBestScore = records?.bestScore === null
+      || (Number.isInteger(records?.bestScore) && records.bestScore >= 1 && records.bestScore <= MAX_TRIES);
+    const validWinStreak = Number.isInteger(records?.winStreak) && records.winStreak >= 0;
+
+    if (!validBestScore || !validWinStreak) {
+      throw new Error("Saved records have an invalid format.");
+    }
+
+    state.bestScore = records.bestScore;
+    state.winStreak = records.winStreak;
+  } catch {
+    showRecordsWarning();
+  }
+}
+
+function saveRecords() {
+  try {
+    window.localStorage.setItem(RECORDS_KEY, JSON.stringify({
+      bestScore: state.bestScore,
+      winStreak: state.winStreak,
+    }));
+    ui.recordsStatus.hidden = true;
+  } catch {
+    showRecordsWarning();
+  }
+}
+
+function showResult(won) {
+  const triesUsed = state.guesses.length;
+  const score = MAX_TRIES + 1 - triesUsed;
+  const outcome = won ? "win" : "loss";
+  const colors = ["#c9ff59", "#ffcb68", "#e8f2d6"];
+
+  ui.result.dataset.outcome = outcome;
+  ui.gameScreen.dataset.outcome = outcome;
+  ui.resultTitle.textContent = won ? "ROUND WON!" : "ROUND OVER";
+  ui.resultNumber.textContent = `THE NUMBER WAS ${state.select}`;
+  ui.resultMessage.textContent = won
+    ? `You found it in ${triesUsed} ${triesUsed === 1 ? "try" : "tries"} and scored ${score} ${score === 1 ? "point" : "points"}.`
+    : "Better luck next round.";
+  ui.resultConfetti.replaceChildren();
+  ui.resultConfetti.hidden = !won;
+
+  if (won) {
+    for (let index = 0; index < 32; index += 1) {
+      const piece = document.createElement("span");
+      piece.className = "result-confetti__piece";
+      piece.style.setProperty("--piece-x", `${Math.random() * 100}%`);
+      piece.style.setProperty("--piece-drift", `${Math.round(Math.random() * 180 - 90)}px`);
+      piece.style.setProperty("--piece-delay", `${Math.random() * 0.55}s`);
+      piece.style.setProperty("--piece-rotation", `${Math.round(Math.random() * 720 - 360)}deg`);
+      piece.style.setProperty("--piece-color", colors[index % colors.length]);
+      ui.resultConfetti.append(piece);
+    }
+  }
+
+  ui.result.hidden = false;
+}
+
 function resetGame() {
   state.select = getRandomNumber();
   state.attemptsLeft = MAX_TRIES;
@@ -76,6 +164,11 @@ function resetGame() {
   ui.input.removeAttribute("aria-invalid");
   ui.submit.disabled = false;
   ui.submit.hidden = false;
+  ui.form.hidden = false;
+  ui.result.hidden = true;
+  ui.result.removeAttribute("data-outcome");
+  ui.gameScreen.removeAttribute("data-outcome");
+  ui.resultConfetti.replaceChildren();
   ui.restart.hidden = true;
   setStatus("Enter a whole number from 1 to 20.");
   renderLives();
@@ -84,10 +177,25 @@ function resetGame() {
 
 function endGame(won) {
   state.isGameOver = true;
+  if (won) {
+    const score = MAX_TRIES + 1 - state.guesses.length;
+    state.winStreak += 1;
+    if (state.bestScore === null || score > state.bestScore) {
+      state.bestScore = score;
+    }
+  } else {
+    state.winStreak = 0;
+  }
+  renderRecords();
+  saveRecords();
+
   ui.input.disabled = true;
   ui.submit.disabled = true;
   ui.submit.hidden = true;
+  ui.form.hidden = true;
   ui.restart.hidden = false;
+  showResult(won);
+  ui.resultTitle.focus();
 
   if (won) {
     setStatus("YOU GOT IT! Nice shot.", "success");
@@ -98,14 +206,27 @@ function endGame(won) {
   setStatus(`OUT OF TRIES. The number was ${state.select}.`, "error");
 }
 
+function focusGame() {
+  if (window.matchMedia("(max-height: 600px)").matches) {
+    ui.gameScreen.focus({ preventScroll: true });
+    ui.gameScreen.scrollTop = 0;
+    return;
+  }
+
+  ui.input.focus();
+}
+
 function startGame() {
   resetGame();
   ui.startScreen.hidden = true;
   ui.gameScreen.hidden = false;
-  ui.input.focus();
+  focusGame();
 }
 
 ui.start.addEventListener("click", startGame);
+
+loadRecords();
+renderRecords();
 
 ui.form.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -165,5 +286,5 @@ ui.form.addEventListener("submit", (event) => {
 
 ui.restart.addEventListener("click", () => {
   resetGame();
-  ui.input.focus();
+  focusGame();
 });

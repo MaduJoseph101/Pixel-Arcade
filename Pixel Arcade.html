@@ -26,7 +26,7 @@
                             <p class="start-screen__intro">Find the hidden number. You have three tries.</p>
 
                             <div class="game-specs" aria-label="Game rules">
-                                <p><span>RANGE</span><strong>01—20</strong></p>
+                                <p><span>RANGE</span><strong>01-20</strong></p>
                                 <p><span>TRIES</span><strong>03</strong></p>
                                 <p><span>MODE</span><strong>SOLO</strong></p>
                             </div>
@@ -57,7 +57,19 @@
                             </div>
                         </div>
 
-                        <p class="game-screen__prompt">Pick a number from 1 to 20.</p>
+                        <section class="arcade-records" aria-label="Personal records">
+                            <div class="arcade-record">
+                                <span class="arcade-record__label">BEST SCORE</span>
+                                <p class="arcade-record__value"><output id="best-score">—</output><span>PTS</span></p>
+                            </div>
+                            <div class="arcade-record arcade-record--streak">
+                                <span class="arcade-record__label">WIN STREAK</span>
+                                <p class="arcade-record__value"><output id="win-streak">0</output><span>WINS</span></p>
+                            </div>
+                        </section>
+                        <p class="records-status" id="records-status" role="status" aria-live="polite" hidden></p>
+
+                        <p class="game-screen__prompt">Pick a number from 1 to 20</p>
 
                         <div class="round-info">
                             <div class="possible-range">
@@ -89,6 +101,15 @@
                             <p class="value" id="guess-help" role="status" aria-live="polite" aria-atomic="true">Enter a whole number from 1 to 20.</p>
                             <button class="button button--primary submit" type="submit">LOCK IN GUESS</button>
                         </form>
+
+                        <section class="result-panel" id="result-panel" role="status" aria-atomic="true" hidden>
+                            <div class="result-confetti" id="result-confetti" aria-hidden="true"></div>
+                            <div class="result-panel__content">
+                                <h3 class="result-panel__title" id="result-title" tabindex="-1"></h3>
+                                <p class="result-panel__number" id="result-number"></p>
+                                <p class="result-panel__message" id="result-message"></p>
+                            </div>
+                        </section>
 
                         <button class="button button--secondary restart" type="button" hidden>PLAY AGAIN</button>
                     </div>

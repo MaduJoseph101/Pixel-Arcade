@@ -40,7 +40,7 @@
 }
 
 body {
-    min-width: 320px;
+    min-width: 0;
     min-height: 100vh;
     min-height: 100dvh;
     margin: 0;
@@ -373,6 +373,17 @@ button {
     margin-inline: auto;
 }
 
+.game-screen {
+    min-height: 0;
+    min-width: 0;
+    max-height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-color: #82966d #10191b;
+    scrollbar-width: thin;
+}
+
 .game-screen__heading {
     display: flex;
     align-items: center;
@@ -388,6 +399,62 @@ button {
     line-height: 1.15;
     letter-spacing: -0.04em;
     text-wrap: balance;
+}
+
+.arcade-records {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 18px;
+    border: 1px solid rgba(201, 255, 89, 0.22);
+    background: linear-gradient(150deg, rgba(201, 255, 89, 0.06), rgba(16, 25, 27, 0.82));
+}
+
+.arcade-record {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 10px;
+}
+
+.arcade-record--streak {
+    border-left: 1px solid rgba(201, 255, 89, 0.2);
+}
+
+.arcade-record__label {
+    flex-shrink: 0;
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+}
+
+.arcade-record__value {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: baseline;
+    gap: 4px;
+    margin: 0;
+    color: var(--amber);
+    font-size: 1.15rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.arcade-record__value span {
+    color: var(--muted);
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+}
+
+.records-status {
+    margin: 6px 0 0;
+    color: #ff9bb5;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    text-align: center;
 }
 
 .lives {
@@ -443,6 +510,7 @@ button {
     color: var(--ink);
     font-size: var(--type-body);
     line-height: 1.5;
+    text-align: center;
 }
 
 .round-info {
@@ -605,6 +673,115 @@ button {
     width: 100%;
 }
 
+.result-panel {
+    position: relative;
+    display: grid;
+    min-height: 220px;
+    place-items: center;
+    overflow: hidden;
+    margin-bottom: var(--space-4);
+    border: 2px solid rgba(201, 255, 89, 0.48);
+    background:
+        radial-gradient(ellipse at 50% 45%, rgba(201, 255, 89, 0.13), transparent 68%),
+        linear-gradient(145deg, #16211c, #0c1315 72%);
+    box-shadow: inset 0 0 0 5px rgba(201, 255, 89, 0.05);
+}
+
+.result-panel[data-outcome="loss"] {
+    animation: loss-signal 1.8s ease-in-out 2;
+    border-color: rgba(255, 96, 142, 0.5);
+    background:
+        radial-gradient(ellipse at 50% 45%, rgba(255, 96, 142, 0.12), transparent 68%),
+        linear-gradient(145deg, #21171c, #0c1315 72%);
+}
+
+.result-panel[data-outcome="loss"] .result-confetti {
+    display: none !important;
+}
+
+.game-screen[data-outcome="loss"] .life-icon.is-lost {
+    animation: none;
+}
+
+@keyframes loss-signal {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.015);
+    }
+}
+
+.result-panel__content {
+    position: relative;
+    z-index: 1;
+    padding: 28px 20px;
+    text-align: center;
+}
+
+.result-panel__title {
+    margin: 0;
+    color: var(--phosphor);
+    font-size: clamp(2rem, 5vw, 2.75rem);
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: -0.035em;
+}
+
+.result-panel__title:focus {
+    outline: 3px solid var(--focus);
+    outline-offset: 6px;
+}
+
+.result-panel[data-outcome="loss"] .result-panel__title {
+    color: #ff9bb5;
+}
+
+.result-panel__number {
+    margin: 14px 0 0;
+    color: var(--amber);
+    font-size: clamp(1.5rem, 4vw, 2rem);
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.result-panel__message {
+    margin: 8px 0 0;
+    color: var(--ink);
+    font-size: var(--type-body);
+}
+
+.result-confetti {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.result-confetti__piece {
+    position: absolute;
+    top: -12px;
+    left: var(--piece-x);
+    width: 7px;
+    height: 12px;
+    background: var(--piece-color);
+    opacity: 0;
+    animation: confetti-fall 2.4s cubic-bezier(0.2, 0.7, 0.35, 1) var(--piece-delay) both;
+}
+
+.result-confetti__piece:nth-child(3n) {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+}
+
+.result-confetti__piece:nth-child(3n + 1) {
+    width: 5px;
+    height: 14px;
+}
+
 .visually-hidden {
     position: absolute;
     width: 1px;
@@ -623,6 +800,10 @@ button {
 
     .game-screen__prompt {
         margin: 22px 0 18px;
+    }
+
+    .arcade-records {
+        margin-top: 12px;
     }
 
     .guess-form {
@@ -672,6 +853,14 @@ button {
         margin-block: 18px 16px;
     }
 
+    .arcade-records {
+        margin-top: 10px;
+    }
+
+    .arcade-record {
+        padding-block: 6px;
+    }
+
     .guess-form {
         gap: 12px;
     }
@@ -716,6 +905,22 @@ button {
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+@keyframes confetti-fall {
+    0% {
+        opacity: 0;
+        transform: translate3d(0, -8px, 0) rotate(0);
+    }
+
+    12% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate3d(var(--piece-drift), 240px, 0) rotate(var(--piece-rotation));
     }
 }
 
@@ -826,6 +1031,20 @@ button {
         text-align: center;
     }
 
+    .arcade-records {
+        margin-top: 14px;
+    }
+
+    .arcade-record {
+        gap: 6px;
+        padding: 7px 5px;
+    }
+
+    .arcade-record__label {
+        font-size: 0.7rem;
+        letter-spacing: 0.04em;
+    }
+
     .lives {
         display: grid;
         justify-items: center;
@@ -916,6 +1135,19 @@ button {
         font-size: clamp(2.5rem, 12vw, 3.25rem);
     }
 
+    .arcade-record {
+        gap: 4px;
+        padding-inline: 3px;
+    }
+
+    .arcade-record__label {
+        font-size: 0.7rem;
+    }
+
+    .arcade-record__value {
+        font-size: 1rem;
+    }
+
     .mystery-display {
         min-height: 82px;
     }
@@ -983,6 +1215,66 @@ button {
     .game-screen__prompt {
         margin-block: 18px 16px;
     }
+
+    .arcade-records {
+        margin-top: 10px;
+    }
+
+}
+
+@media (max-height: 500px) {
+    .game-screen {
+        padding-block: 10px;
+        scroll-padding-block: 10px;
+    }
+
+    .game-screen__heading h2 {
+        font-size: clamp(1.5rem, 4.5vh, 2rem);
+    }
+
+    .lives {
+        gap: 4px;
+        padding-block: 5px;
+    }
+
+    .game-screen__prompt {
+        margin-block: 12px 10px;
+    }
+
+    .arcade-records {
+        margin-top: 8px;
+    }
+
+    .round-info {
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    .guess-form {
+        gap: 8px;
+    }
+
+    .input {
+        min-height: 58px;
+    }
+
+    .guess-form .button,
+    .restart {
+        min-height: 52px;
+    }
+
+    .result-panel {
+        min-height: 160px;
+        margin-bottom: 12px;
+    }
+
+    .result-panel__content {
+        padding: 18px 14px;
+    }
+
+    .result-panel__number {
+        margin-top: 8px;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -993,5 +1285,9 @@ button {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+    }
+
+    .result-confetti {
+        display: none;
     }
 }

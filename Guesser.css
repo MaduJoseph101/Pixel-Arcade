@@ -445,6 +445,78 @@ button {
     line-height: 1.5;
 }
 
+.round-info {
+    display: grid;
+    grid-template-columns: minmax(100px, 0.55fr) minmax(0, 1.45fr);
+    gap: 12px;
+    margin-bottom: var(--space-4);
+}
+
+.possible-range,
+.guess-history {
+    display: grid;
+    min-width: 0;
+    align-content: center;
+    gap: 6px;
+    padding: 10px 12px;
+    border: 1px solid rgba(201, 255, 89, 0.2);
+    background: linear-gradient(150deg, rgba(201, 255, 89, 0.06), rgba(16, 25, 27, 0.82));
+}
+
+.round-info__label {
+    color: var(--muted);
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+}
+
+.possible-range__value {
+    color: var(--amber);
+    font-size: 1.2rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.guess-history__list {
+    display: flex;
+    min-height: 1.5em;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.guess-history__item,
+.guess-history__empty {
+    color: var(--ink);
+    font-size: 0.8rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.guess-history__item {
+    padding: 2px 7px;
+    border: 1px solid rgba(255, 203, 104, 0.28);
+    background: rgba(255, 203, 104, 0.08);
+}
+
+.guess-history__item--low {
+    color: var(--phosphor);
+    border-color: rgba(201, 255, 89, 0.28);
+    background: rgba(201, 255, 89, 0.07);
+}
+
+.guess-history__item--correct {
+    color: var(--phosphor);
+    border-color: rgba(201, 255, 89, 0.45);
+    background: rgba(201, 255, 89, 0.12);
+}
+
+.guess-history__empty {
+    color: var(--muted);
+}
+
 .guess-form {
     display: grid;
     justify-items: center;
@@ -766,6 +838,17 @@ button {
     .game-screen__prompt {
         margin-block: 28px;
         text-align: center;
+    }
+
+    .round-info {
+        grid-template-columns: minmax(85px, 0.55fr) minmax(0, 1.45fr);
+        gap: 8px;
+        margin-bottom: 18px;
+    }
+
+    .possible-range,
+    .guess-history {
+        padding: 8px;
     }
 
     .guess-form {

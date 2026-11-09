@@ -59,6 +59,19 @@
 
                         <p class="game-screen__prompt">Pick a number from 1 to 20.</p>
 
+                        <div class="round-info">
+                            <div class="possible-range">
+                                <span class="round-info__label">RANGE LEFT</span>
+                                <output class="possible-range__value" id="possible-range" aria-live="polite" aria-atomic="true">1—20</output>
+                            </div>
+                            <div class="guess-history">
+                                <span class="round-info__label">YOUR GUESSES</span>
+                                <ol class="guess-history__list" id="guess-history" aria-label="Guess history">
+                                    <li class="guess-history__empty">No guesses yet</li>
+                                </ol>
+                            </div>
+                        </div>
+
                         <form class="guess-form" novalidate>
                             <label for="guess-input">YOUR NUMBER</label>
                             <input

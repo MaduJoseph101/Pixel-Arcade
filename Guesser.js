@@ -23,6 +23,8 @@ const ui = {
   bestScore: document.getElementById("best-score"),
   winStreak: document.getElementById("win-streak"),
   recordsStatus: document.getElementById("records-status"),
+  soundToggle: document.getElementById("sound-toggle"),
+  soundStatus: document.getElementById("sound-status"),
 };
 
 const state = {
@@ -34,6 +36,8 @@ const state = {
   guesses: [],
   bestScore: null,
   winStreak: 0,
+  soundEnabled: false,
+  audioContext: null,
 };
 
 function getRandomNumber() {
@@ -77,6 +81,96 @@ function renderRoundInfo() {
 function renderRecords() {
   ui.bestScore.textContent = state.bestScore === null ? "—" : String(state.bestScore);
   ui.winStreak.textContent = String(state.winStreak);
+}
+
+function updateSoundToggle() {
+  ui.soundToggle.textContent = state.soundEnabled ? "SOUND ON" : "SOUND OFF";
+  ui.soundToggle.setAttribute("aria-pressed", String(state.soundEnabled));
+}
+
+async function toggleSound() {
+  if (!state.soundEnabled) {
+    const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextConstructor) {
+      ui.soundStatus.textContent = "Sound effects are not supported in this browser.";
+      return;
+    }
+
+    try {
+      state.audioContext ??= new AudioContextConstructor();
+      await state.audioContext.resume();
+      if (state.audioContext.state !== "running") {
+        throw new Error("The audio context did not start.");
+      }
+
+      state.soundEnabled = true;
+      ui.soundStatus.textContent = "Sound effects enabled. You should hear a test tone.";
+    } catch (error) {
+      state.soundEnabled = false;
+      ui.soundStatus.textContent = "Could not enable sound effects. Try again or keep playing without sound.";
+      console.error("Could not enable sound effects.", error);
+    }
+  } else {
+    state.soundEnabled = false;
+    ui.soundStatus.textContent = "Sound effects muted.";
+  }
+
+  updateSoundToggle();
+
+  if (state.soundEnabled) {
+    playSoundCue("toggle");
+  }
+}
+
+function playTone(frequency, startTime, duration, volume = 0.12) {
+  const oscillator = state.audioContext.createOscillator();
+  const gain = state.audioContext.createGain();
+  oscillator.type = "square";
+  oscillator.frequency.setValueAtTime(frequency, startTime);
+  gain.gain.setValueAtTime(0.0001, startTime);
+  gain.gain.exponentialRampToValueAtTime(volume, startTime + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  oscillator.connect(gain);
+  gain.connect(state.audioContext.destination);
+  oscillator.start(startTime);
+  oscillator.stop(startTime + duration + 0.02);
+}
+
+function scheduleSoundCue(cue) {
+  const now = state.audioContext.currentTime;
+  const cues = {
+    low: [[330, 0, 0.18]],
+    high: [[220, 0, 0.18]],
+    win: [[523, 0, 0.16], [659, 0.16, 0.16], [784, 0.32, 0.26]],
+    loss: [[330, 0, 0.2], [247, 0.2, 0.28]],
+    toggle: [[659, 0, 0.14], [880, 0.15, 0.2]],
+  };
+
+  cues[cue].forEach(([frequency, offset, duration]) => {
+    playTone(frequency, now + offset, duration);
+  });
+}
+
+function playSoundCue(cue) {
+  if (!state.soundEnabled || !state.audioContext) {
+    return;
+  }
+
+  if (state.audioContext.state === "running") {
+    scheduleSoundCue(cue);
+    return;
+  }
+
+  state.audioContext.resume().then(() => {
+    if (state.soundEnabled && state.audioContext?.state === "running") {
+      scheduleSoundCue(cue);
+    }
+  }).catch((error) => {
+    state.soundEnabled = false;
+    updateSoundToggle();
+    ui.soundStatus.textContent = "Sound stopped. Turn sound on again to retry.";
+    console.error("Could not resume sound effects.", error);
+  });
 }
 
 function showRecordsWarning() {
@@ -196,6 +290,7 @@ function endGame(won) {
   ui.restart.hidden = false;
   showResult(won);
   ui.resultTitle.focus();
+  playSoundCue(won ? "win" : "loss");
 
   if (won) {
     setStatus("YOU GOT IT! Nice shot.", "success");
@@ -224,6 +319,8 @@ function startGame() {
 }
 
 ui.start.addEventListener("click", startGame);
+ui.soundToggle.addEventListener("click", toggleSound);
+updateSoundToggle();
 
 loadRecords();
 renderRecords();
@@ -278,6 +375,7 @@ ui.form.addEventListener("submit", (event) => {
     return;
   }
 
+  playSoundCue(result);
   const clue = guess < state.select
     ? "Too low. Try a higher number."
     : "Too high. Try a lower number.";

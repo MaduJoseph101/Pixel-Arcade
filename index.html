@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#090d12">
     <meta name="description" content="A quick solo number-guessing game. Find the hidden number in three tries.">
     <link rel="icon" type="image/svg+xml" href="favi.svg">
@@ -106,16 +106,15 @@
                             <button class="button button--primary submit" type="submit">LOCK IN GUESS</button>
                         </form>
 
-                        <section class="result-panel" id="result-panel" role="status" aria-atomic="true" hidden>
+                        <dialog class="result-panel" id="result-panel" aria-labelledby="result-title" aria-describedby="result-number result-message">
                             <div class="result-confetti" id="result-confetti" aria-hidden="true"></div>
                             <div class="result-panel__content">
-                                <h3 class="result-panel__title" id="result-title" tabindex="-1"></h3>
+                                <h3 class="result-panel__title" id="result-title"></h3>
                                 <p class="result-panel__number" id="result-number"></p>
                                 <p class="result-panel__message" id="result-message"></p>
                             </div>
-                        </section>
-
-                        <button class="button button--secondary restart" type="button" hidden>PLAY AGAIN</button>
+                            <button class="button button--secondary restart" type="button" autofocus>PLAY AGAIN</button>
+                        </dialog>
                     </div>
                 </section>
             </div>

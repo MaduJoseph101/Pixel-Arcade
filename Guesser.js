@@ -241,11 +241,13 @@ function showResult(won) {
       ui.resultConfetti.append(piece);
     }
   }
-
-  ui.result.hidden = false;
 }
 
 function resetGame() {
+  if (ui.result.open) {
+    ui.result.close();
+  }
+
   state.select = getRandomNumber();
   state.attemptsLeft = MAX_TRIES;
   state.isGameOver = false;
@@ -259,11 +261,9 @@ function resetGame() {
   ui.submit.disabled = false;
   ui.submit.hidden = false;
   ui.form.hidden = false;
-  ui.result.hidden = true;
   ui.result.removeAttribute("data-outcome");
   ui.gameScreen.removeAttribute("data-outcome");
   ui.resultConfetti.replaceChildren();
-  ui.restart.hidden = true;
   setStatus("Enter a whole number from 1 to 20.");
   renderLives();
   renderRoundInfo();
@@ -287,9 +287,8 @@ function endGame(won) {
   ui.submit.disabled = true;
   ui.submit.hidden = true;
   ui.form.hidden = true;
-  ui.restart.hidden = false;
   showResult(won);
-  ui.resultTitle.focus();
+  ui.result.showModal();
   playSoundCue(won ? "win" : "loss");
 
   if (won) {
@@ -321,6 +320,10 @@ function startGame() {
 ui.start.addEventListener("click", startGame);
 ui.soundToggle.addEventListener("click", toggleSound);
 updateSoundToggle();
+
+ui.result.addEventListener("cancel", (event) => {
+  event.preventDefault();
+});
 
 loadRecords();
 renderRecords();

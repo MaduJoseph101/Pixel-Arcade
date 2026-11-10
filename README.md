@@ -9,8 +9,8 @@ A simple number guessing game built with vanilla HTML, CSS, and JavaScript. Try 
 - **Random Number Generation**: A new secret number is generated for every game.
 - **Limited Trials**: You have 3 tries, shown with SVG heart icons, to guess the number.
 - **Helpful Hints**: Get feedback on whether your guess is too high or too low.
-- **Win/Loss States**: Clear messages for winning or losing.
-- **Restart Functionality**: Easily start a new game with the click of a button.
+- **Win/Loss States**: A modal clearly announces the result and reveals the hidden number.
+- **Restart Functionality**: A prominent **Play Again** button starts a new round from the result modal.
 
 ## How to Play
 

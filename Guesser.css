@@ -176,6 +176,14 @@ button {
     animation: power-on 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+.start-screen {
+    max-height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-color: #82966d #10191b;
+    scrollbar-width: thin;
+}
+
 .start-screen__layout {
     display: grid;
     grid-template-columns: minmax(0, 1.35fr) minmax(150px, 0.65fr);
@@ -565,6 +573,7 @@ button {
     font-size: 0.7rem;
     font-weight: 900;
     letter-spacing: 0.1em;
+    white-space: nowrap;
 }
 
 .possible-range__value {
@@ -703,17 +712,42 @@ button {
 }
 
 .result-panel {
-    position: relative;
+    position: fixed;
+    inset: 0;
     display: grid;
-    min-height: 220px;
-    place-items: center;
-    overflow: hidden;
-    margin-bottom: var(--space-4);
+    width: min(440px, calc(100vw - 32px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+    max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    grid-template-columns: minmax(0, 1fr);
+    align-content: center;
+    gap: var(--space-3);
+    overflow: auto;
+    overscroll-behavior: contain;
+    margin: auto;
+    padding: clamp(12px, 4vw, 22px);
     border: 2px solid rgba(201, 255, 89, 0.48);
+    color: var(--ink);
     background:
         radial-gradient(ellipse at 50% 45%, rgba(201, 255, 89, 0.13), transparent 68%),
         linear-gradient(145deg, #16211c, #0c1315 72%);
-    box-shadow: inset 0 0 0 5px rgba(201, 255, 89, 0.05);
+    box-shadow:
+        0 24px 80px rgba(0, 0, 0, 0.7),
+        inset 0 0 0 5px rgba(201, 255, 89, 0.05);
+}
+
+.result-panel:not([open]) {
+    display: none;
+}
+
+.result-panel::backdrop {
+    background: rgba(3, 7, 9, 0.82);
+}
+
+.result-panel .restart {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    min-width: 0;
+    min-height: 64px;
 }
 
 .result-panel[data-outcome="loss"] {
@@ -757,10 +791,6 @@ button {
     font-weight: 900;
     line-height: 1.1;
     letter-spacing: -0.035em;
-}
-
-.result-panel__title:focus {
-    outline: none;
 }
 
 .result-panel[data-outcome="loss"] .result-panel__title {
@@ -866,7 +896,7 @@ button {
     }
 
     .game-specs {
-        margin: 14px 0;
+        margin: 14px auto;
     }
 
     .game-specs p {
@@ -977,12 +1007,17 @@ button {
         display: grid;
         min-height: 100vh;
         min-height: 100dvh;
+        height: 100vh;
+        height: 100dvh;
         grid-template-rows: auto minmax(0, 1fr);
         width: 100%;
-        height: auto;
         max-height: none;
         aspect-ratio: auto;
-        padding: 8px;
+        padding:
+            max(8px, env(safe-area-inset-top))
+            max(8px, env(safe-area-inset-right))
+            max(8px, env(safe-area-inset-bottom))
+            max(8px, env(safe-area-inset-left));
         border: 0;
     }
 
@@ -1083,19 +1118,28 @@ button {
     }
 
     .game-screen__prompt {
-        margin-block: 28px;
+        margin-block: 20px;
         text-align: center;
     }
 
     .round-info {
-        grid-template-columns: minmax(85px, 0.55fr) minmax(0, 1.45fr);
+        grid-template-columns: minmax(88px, 0.6fr) minmax(0, 1.4fr);
         gap: 8px;
         margin-bottom: 18px;
+    }
+
+    .round-info__label {
+        font-size: 0.7rem;
+        letter-spacing: 0.04em;
     }
 
     .possible-range,
     .guess-history {
         padding: 8px;
+    }
+
+    .input {
+        min-height: 72px;
     }
 
     .guess-form {
@@ -1292,8 +1336,7 @@ button {
     }
 
     .result-panel {
-        min-height: 160px;
-        margin-bottom: 12px;
+        min-height: 0;
     }
 
     .result-panel__content {
@@ -1302,6 +1345,70 @@ button {
 
     .result-panel__number {
         margin-top: 8px;
+    }
+}
+
+@media (min-width: 601px) and (max-height: 650px) {
+    .cabinet {
+        width: min(100%, 920px);
+        height: min(calc(100dvh - 32px), 767px);
+        aspect-ratio: auto;
+    }
+
+    .start-screen,
+    .game-screen {
+        padding-block: 8px;
+    }
+
+    .start-screen__layout {
+        grid-template-columns: minmax(0, 1.35fr) minmax(120px, 0.65fr);
+        gap: clamp(16px, 3vw, 28px);
+    }
+
+    .start-screen__content {
+        width: auto;
+        margin: 0;
+        text-align: left;
+    }
+
+    .game-title {
+        font-size: clamp(2rem, 7.5vh, 2.8rem);
+    }
+
+    .start-screen__intro {
+        margin: 8px 0 0;
+    }
+
+    .game-specs {
+        margin: 8px auto;
+    }
+
+    .game-specs p {
+        padding-block: 6px;
+    }
+
+    .start-screen .button {
+        min-height: 52px;
+    }
+
+    .start-screen__note {
+        margin-top: 4px;
+    }
+
+    .mystery-display {
+        display: grid;
+        min-height: clamp(110px, 35vh, 150px);
+        width: auto;
+        margin: 0;
+        transform: rotate(2deg);
+    }
+
+    .mystery-display__number {
+        font-size: clamp(4rem, 8vh, 6rem);
+    }
+
+    .mystery-display__label {
+        text-align: center;
     }
 }
 

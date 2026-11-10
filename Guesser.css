@@ -117,11 +117,6 @@ button {
     border-color: var(--phosphor);
 }
 
-.sound-toggle:focus-visible {
-    outline: 3px solid var(--focus);
-    outline-offset: 3px;
-}
-
 .cabinet__brand,
 .lives__label,
 .start-screen__note {
@@ -392,7 +387,10 @@ button {
     opacity: 0.55;
 }
 
-.button:focus-visible,
+.button:focus-visible {
+    outline: none;
+}
+
 .input:focus-visible {
     outline: 3px solid var(--focus);
     outline-offset: 4px;

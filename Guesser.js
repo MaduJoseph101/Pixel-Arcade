@@ -301,12 +301,6 @@ function endGame(won) {
 }
 
 function focusGame() {
-  if (window.matchMedia("(max-height: 600px)").matches) {
-    ui.gameScreen.focus({ preventScroll: true });
-    ui.gameScreen.scrollTop = 0;
-    return;
-  }
-
   ui.input.focus();
 }
 

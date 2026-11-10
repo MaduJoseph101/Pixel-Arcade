@@ -1,11 +1,29 @@
-const MAX_NUMBER = 20;
-const MAX_TRIES = 3;
 const RECORDS_KEY = "pixelArcadeRecords";
+const SOUND_PREFERENCE_KEY = "pixelArcadeSoundEnabled";
+const DIFFICULTIES = {
+  easy: { label: "Easy", maxNumber: 10, maxTries: 5 },
+  normal: { label: "Normal", maxNumber: 20, maxTries: 3 },
+  hard: { label: "Hard", maxNumber: 50, maxTries: 3 },
+};
+
+function createEmptyRecords() {
+  return Object.fromEntries(
+    Object.keys(DIFFICULTIES).map((difficulty) => [
+      difficulty,
+      { bestScore: null, winStreak: 0 },
+    ]),
+  );
+}
 
 const ui = {
   startScreen: document.getElementById("start-screen"),
   gameScreen: document.getElementById("game-screen"),
   start: document.querySelector(".start"),
+  difficulty: document.getElementById("difficulty-select"),
+  startIntro: document.getElementById("start-intro"),
+  specRange: document.getElementById("spec-range"),
+  specTries: document.getElementById("spec-tries"),
+  gamePrompt: document.getElementById("game-prompt"),
   form: document.querySelector(".guess-form"),
   input: document.querySelector(".input"),
   submit: document.querySelector(".submit"),
@@ -16,7 +34,12 @@ const ui = {
   possibleRange: document.getElementById("possible-range"),
   guessHistory: document.getElementById("guess-history"),
   result: document.getElementById("result-panel"),
+  resultDifficultyTrigger: document.getElementById("result-difficulty-trigger"),
+  resultDifficultyValue: document.getElementById("result-difficulty-value"),
+  resultDifficultyMenu: document.getElementById("result-difficulty-menu"),
+  resultDifficultyOptions: [...document.querySelectorAll(".result-difficulty__option")],
   resultTitle: document.getElementById("result-title"),
+  resultMode: document.getElementById("result-mode"),
   resultNumber: document.getElementById("result-number"),
   resultMessage: document.getElementById("result-message"),
   resultConfetti: document.getElementById("result-confetti"),
@@ -28,20 +51,29 @@ const ui = {
 };
 
 const state = {
+  difficulty: "normal",
+  nextDifficulty: "normal",
   select: 0,
-  attemptsLeft: MAX_TRIES,
+  attemptsLeft: DIFFICULTIES.normal.maxTries,
   isGameOver: false,
   lowestPossible: 1,
-  highestPossible: MAX_NUMBER,
+  highestPossible: DIFFICULTIES.normal.maxNumber,
   guesses: [],
-  bestScore: null,
-  winStreak: 0,
+  records: createEmptyRecords(),
   soundEnabled: false,
   audioContext: null,
 };
 
+function getDifficulty() {
+  return DIFFICULTIES[state.difficulty];
+}
+
+function getCurrentRecords() {
+  return state.records[state.difficulty];
+}
+
 function getRandomNumber() {
-  return Math.floor(Math.random() * MAX_NUMBER) + 1;
+  return Math.floor(Math.random() * getDifficulty().maxNumber) + 1;
 }
 
 function setStatus(message, status = "default") {
@@ -50,6 +82,22 @@ function setStatus(message, status = "default") {
 }
 
 function renderLives() {
+  const { maxTries } = getDifficulty();
+  if (ui.hearts.childElementCount !== maxTries) {
+    const fragment = document.createDocumentFragment();
+    for (let index = 0; index < maxTries; index += 1) {
+      const heart = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      heart.classList.add("life-icon");
+      heart.setAttribute("viewBox", "0 0 24 24");
+      heart.setAttribute("focusable", "false");
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z");
+      heart.append(path);
+      fragment.append(heart);
+    }
+    ui.hearts.replaceChildren(fragment);
+  }
+
   ui.hearts.querySelectorAll(".life-icon").forEach((heart, index) => {
     const isActive = index < state.attemptsLeft;
     heart.classList.toggle("is-active", isActive);
@@ -79,13 +127,82 @@ function renderRoundInfo() {
 }
 
 function renderRecords() {
-  ui.bestScore.textContent = state.bestScore === null ? "—" : String(state.bestScore);
-  ui.winStreak.textContent = String(state.winStreak);
+  const records = getCurrentRecords();
+  ui.bestScore.textContent = records.bestScore === null ? "—" : String(records.bestScore);
+  ui.winStreak.textContent = String(records.winStreak);
+}
+
+function updateDifficultyPreview() {
+  const difficulty = getDifficulty();
+  const upperBound = String(difficulty.maxNumber).padStart(2, "0");
+  ui.startIntro.textContent = "Find the hidden number.";
+  ui.specRange.textContent = `01–${upperBound}`;
+  ui.specTries.textContent = String(difficulty.maxTries).padStart(2, "0");
+  ui.gamePrompt.textContent = `${difficulty.label} mode · Pick a number from 1 to ${difficulty.maxNumber}.`;
+  ui.input.min = "1";
+  ui.input.max = String(difficulty.maxNumber);
+  setStatus(`Enter a whole number from 1 to ${difficulty.maxNumber}.`);
+}
+
+function updateResultDifficulty() {
+  ui.resultDifficultyValue.textContent = DIFFICULTIES[state.nextDifficulty].label;
+  ui.resultDifficultyOptions.forEach((option) => {
+    option.setAttribute("aria-selected", String(option.dataset.difficulty === state.nextDifficulty));
+  });
+}
+
+function closeResultDifficultyMenu(returnFocus = false) {
+  ui.resultDifficultyMenu.hidden = true;
+  ui.resultDifficultyTrigger.setAttribute("aria-expanded", "false");
+  if (returnFocus) {
+    ui.resultDifficultyTrigger.focus();
+  }
+}
+
+function openResultDifficultyMenu() {
+  ui.resultDifficultyMenu.hidden = false;
+  ui.resultDifficultyTrigger.setAttribute("aria-expanded", "true");
+  const selectedOption = ui.resultDifficultyOptions.find(
+    (option) => option.dataset.difficulty === state.nextDifficulty,
+  );
+  selectedOption?.focus();
+}
+
+function focusResultDifficultyOption(index) {
+  const wrappedIndex = (index + ui.resultDifficultyOptions.length) % ui.resultDifficultyOptions.length;
+  ui.resultDifficultyOptions[wrappedIndex].focus();
+}
+
+function chooseResultDifficulty(option) {
+  const difficulty = option.dataset.difficulty;
+  if (!Object.hasOwn(DIFFICULTIES, difficulty)) {
+    throw new Error(`Unknown difficulty option: ${difficulty}`);
+  }
+  state.nextDifficulty = difficulty;
+  updateResultDifficulty();
+  closeResultDifficultyMenu(true);
 }
 
 function updateSoundToggle() {
-  ui.soundToggle.textContent = state.soundEnabled ? "SOUND ON" : "SOUND OFF";
+  ui.soundToggle.textContent = state.soundEnabled ? "Sound on" : "Sound off";
   ui.soundToggle.setAttribute("aria-pressed", String(state.soundEnabled));
+}
+
+function loadSoundPreference() {
+  try {
+    const preference = window.localStorage.getItem(SOUND_PREFERENCE_KEY);
+    state.soundEnabled = preference === "true";
+  } catch {
+    showRecordsWarning();
+  }
+}
+
+function saveSoundPreference() {
+  try {
+    window.localStorage.setItem(SOUND_PREFERENCE_KEY, String(state.soundEnabled));
+  } catch {
+    showRecordsWarning();
+  }
 }
 
 async function toggleSound() {
@@ -116,6 +233,7 @@ async function toggleSound() {
   }
 
   updateSoundToggle();
+  saveSoundPreference();
 
   if (state.soundEnabled) {
     playSoundCue("toggle");
@@ -152,30 +270,59 @@ function scheduleSoundCue(cue) {
 }
 
 function playSoundCue(cue) {
-  if (!state.soundEnabled || !state.audioContext) {
+  if (!state.soundEnabled) {
     return;
   }
 
-  if (state.audioContext.state === "running") {
-    scheduleSoundCue(cue);
-    return;
-  }
-
-  state.audioContext.resume().then(() => {
-    if (state.soundEnabled && state.audioContext?.state === "running") {
-      scheduleSoundCue(cue);
-    }
-  }).catch((error) => {
+  const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextConstructor) {
     state.soundEnabled = false;
     updateSoundToggle();
+    saveSoundPreference();
+    ui.soundStatus.textContent = "Sound effects are not supported in this browser.";
+    return;
+  }
+
+  try {
+    state.audioContext ??= new AudioContextConstructor();
+    if (state.audioContext.state === "running") {
+      scheduleSoundCue(cue);
+      return;
+    }
+
+    state.audioContext.resume().then(() => {
+      if (state.soundEnabled && state.audioContext?.state === "running") {
+        scheduleSoundCue(cue);
+      }
+    }).catch((error) => {
+      state.soundEnabled = false;
+      updateSoundToggle();
+      saveSoundPreference();
+      ui.soundStatus.textContent = "Sound stopped. Turn sound on again to retry.";
+      console.error("Could not resume sound effects.", error);
+    });
+  } catch (error) {
+    state.soundEnabled = false;
+    updateSoundToggle();
+    saveSoundPreference();
     ui.soundStatus.textContent = "Sound stopped. Turn sound on again to retry.";
-    console.error("Could not resume sound effects.", error);
-  });
+    console.error("Could not start sound effects.", error);
+  }
 }
 
 function showRecordsWarning() {
-  ui.recordsStatus.textContent = "Personal records may not be saved in this browser.";
+  ui.recordsStatus.textContent = "Personal records and sound preference may not be saved in this browser.";
   ui.recordsStatus.hidden = false;
+  ui.soundStatus.textContent = "Browser storage is unavailable. Personal records and sound preference may not be saved.";
+}
+
+function isValidRecord(record, maxTries) {
+  return record !== null
+    && typeof record === "object"
+    && (record.bestScore === null
+      || (Number.isInteger(record.bestScore) && record.bestScore >= 1 && record.bestScore <= maxTries))
+    && Number.isInteger(record.winStreak)
+    && record.winStreak >= 0;
 }
 
 function loadRecords() {
@@ -186,16 +333,27 @@ function loadRecords() {
     }
 
     const records = JSON.parse(savedRecords);
-    const validBestScore = records?.bestScore === null
-      || (Number.isInteger(records?.bestScore) && records.bestScore >= 1 && records.bestScore <= MAX_TRIES);
-    const validWinStreak = Number.isInteger(records?.winStreak) && records.winStreak >= 0;
-
-    if (!validBestScore || !validWinStreak) {
-      throw new Error("Saved records have an invalid format.");
+    if (
+      records?.version === 2
+      && records.modes !== null
+      && typeof records.modes === "object"
+      && Object.keys(DIFFICULTIES).every((difficulty) =>
+        isValidRecord(records.modes[difficulty], DIFFICULTIES[difficulty].maxTries))
+    ) {
+      state.records = records.modes;
+      return;
     }
 
-    state.bestScore = records.bestScore;
-    state.winStreak = records.winStreak;
+    if (isValidRecord(records, DIFFICULTIES.normal.maxTries)) {
+      state.records.normal = {
+        bestScore: records.bestScore,
+        winStreak: records.winStreak,
+      };
+      saveRecords();
+      return;
+    }
+
+    throw new Error("Saved records have an invalid format.");
   } catch {
     showRecordsWarning();
   }
@@ -204,8 +362,8 @@ function loadRecords() {
 function saveRecords() {
   try {
     window.localStorage.setItem(RECORDS_KEY, JSON.stringify({
-      bestScore: state.bestScore,
-      winStreak: state.winStreak,
+      version: 2,
+      modes: state.records,
     }));
     ui.recordsStatus.hidden = true;
   } catch {
@@ -214,15 +372,19 @@ function saveRecords() {
 }
 
 function showResult(won) {
+  const difficulty = getDifficulty();
   const triesUsed = state.guesses.length;
-  const score = MAX_TRIES + 1 - triesUsed;
+  const score = difficulty.maxTries + 1 - triesUsed;
   const outcome = won ? "win" : "loss";
-  const colors = ["#c9ff59", "#ffcb68", "#e8f2d6"];
+  const colors = ["#19a968", "#a9e8c7", "#f7c96d"];
 
   ui.result.dataset.outcome = outcome;
   ui.gameScreen.dataset.outcome = outcome;
-  ui.resultTitle.textContent = won ? "ROUND WON!" : "ROUND OVER";
-  ui.resultNumber.textContent = `THE NUMBER WAS ${state.select}`;
+  state.nextDifficulty = state.difficulty;
+  updateResultDifficulty();
+  ui.resultTitle.textContent = won ? "Round Complete" : "Round over";
+  ui.resultMode.textContent = `${difficulty.label} mode`;
+  ui.resultNumber.textContent = `The number was ${state.select}`;
   ui.resultMessage.textContent = won
     ? `You found it in ${triesUsed} ${triesUsed === 1 ? "try" : "tries"} and scored ${score} ${score === 1 ? "point" : "points"}.`
     : "Better luck next round.";
@@ -244,15 +406,16 @@ function showResult(won) {
 }
 
 function resetGame() {
+  const difficulty = getDifficulty();
   if (ui.result.open) {
     ui.result.close();
   }
 
   state.select = getRandomNumber();
-  state.attemptsLeft = MAX_TRIES;
+  state.attemptsLeft = difficulty.maxTries;
   state.isGameOver = false;
   state.lowestPossible = 1;
-  state.highestPossible = MAX_NUMBER;
+  state.highestPossible = difficulty.maxNumber;
   state.guesses = [];
 
   ui.input.value = "";
@@ -264,21 +427,23 @@ function resetGame() {
   ui.result.removeAttribute("data-outcome");
   ui.gameScreen.removeAttribute("data-outcome");
   ui.resultConfetti.replaceChildren();
-  setStatus("Enter a whole number from 1 to 20.");
+  setStatus(`Enter a whole number from 1 to ${difficulty.maxNumber}.`);
   renderLives();
   renderRoundInfo();
 }
 
 function endGame(won) {
   state.isGameOver = true;
+  const difficulty = getDifficulty();
+  const records = getCurrentRecords();
   if (won) {
-    const score = MAX_TRIES + 1 - state.guesses.length;
-    state.winStreak += 1;
-    if (state.bestScore === null || score > state.bestScore) {
-      state.bestScore = score;
+    const score = difficulty.maxTries + 1 - state.guesses.length;
+    records.winStreak += 1;
+    if (records.bestScore === null || score > records.bestScore) {
+      records.bestScore = score;
     }
   } else {
-    state.winStreak = 0;
+    records.winStreak = 0;
   }
   renderRecords();
   saveRecords();
@@ -292,12 +457,12 @@ function endGame(won) {
   playSoundCue(won ? "win" : "loss");
 
   if (won) {
-    setStatus("YOU GOT IT! Nice shot.", "success");
+    setStatus("You got it! Nice work.", "success");
     return;
   }
 
   ui.attemptsLabel.textContent = "No tries remaining";
-  setStatus(`OUT OF TRIES. The number was ${state.select}.`, "error");
+  setStatus(`Out of tries. The number was ${state.select}.`, "error");
 }
 
 function focusGame() {
@@ -305,6 +470,8 @@ function focusGame() {
 }
 
 function startGame() {
+  state.difficulty = ui.difficulty.value;
+  updateDifficultyPreview();
   resetGame();
   ui.startScreen.hidden = true;
   ui.gameScreen.hidden = false;
@@ -312,14 +479,70 @@ function startGame() {
 }
 
 ui.start.addEventListener("click", startGame);
+ui.difficulty.addEventListener("change", () => {
+  state.difficulty = ui.difficulty.value;
+  updateDifficultyPreview();
+  renderRecords();
+});
 ui.soundToggle.addEventListener("click", toggleSound);
+loadSoundPreference();
 updateSoundToggle();
+
+ui.resultDifficultyTrigger.addEventListener("click", () => {
+  if (ui.resultDifficultyMenu.hidden) {
+    openResultDifficultyMenu();
+  } else {
+    closeResultDifficultyMenu();
+  }
+});
+
+ui.resultDifficultyTrigger.addEventListener("keydown", (event) => {
+  if (["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key)) {
+    event.preventDefault();
+    openResultDifficultyMenu();
+  }
+});
+
+ui.resultDifficultyMenu.addEventListener("click", (event) => {
+  const option = event.target.closest(".result-difficulty__option");
+  if (option) {
+    chooseResultDifficulty(option);
+  }
+});
+
+ui.resultDifficultyMenu.addEventListener("keydown", (event) => {
+  const focusedIndex = ui.resultDifficultyOptions.indexOf(document.activeElement);
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeResultDifficultyMenu(true);
+  } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    focusResultDifficultyOption(focusedIndex + (event.key === "ArrowDown" ? 1 : -1));
+  } else if (event.key === "Home" || event.key === "End") {
+    event.preventDefault();
+    focusResultDifficultyOption(event.key === "Home" ? 0 : ui.resultDifficultyOptions.length - 1);
+  } else if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    const option = ui.resultDifficultyOptions[focusedIndex];
+    if (option) {
+      chooseResultDifficulty(option);
+    }
+  }
+});
+
+document.addEventListener("pointerdown", (event) => {
+  if (!ui.resultDifficultyMenu.hidden && !event.target.closest(".result-difficulty")) {
+    closeResultDifficultyMenu();
+  }
+});
 
 ui.result.addEventListener("cancel", (event) => {
   event.preventDefault();
 });
 
 loadRecords();
+updateDifficultyPreview();
+renderLives();
 renderRecords();
 
 ui.form.addEventListener("submit", (event) => {
@@ -332,9 +555,9 @@ ui.form.addEventListener("submit", (event) => {
   const rawGuess = ui.input.value.trim();
   const guess = Number(rawGuess);
 
-  if (rawGuess === "" || !Number.isInteger(guess) || guess < 1 || guess > MAX_NUMBER) {
+  if (rawGuess === "" || !Number.isInteger(guess) || guess < 1 || guess > getDifficulty().maxNumber) {
     ui.input.setAttribute("aria-invalid", "true");
-    setStatus("Enter a whole number from 1 to 20.", "error");
+    setStatus(`Enter a whole number from 1 to ${getDifficulty().maxNumber}.`, "error");
     ui.input.focus();
     return;
   }
@@ -380,6 +603,7 @@ ui.form.addEventListener("submit", (event) => {
 });
 
 ui.restart.addEventListener("click", () => {
-  resetGame();
-  focusGame();
+  closeResultDifficultyMenu();
+  ui.difficulty.value = state.nextDifficulty;
+  startGame();
 });

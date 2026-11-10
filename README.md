@@ -1,3 +1,4 @@
+<img width="959" height="511" alt="Screenshot 2026-11-09 205030" src="https://github.com/user-attachments/assets/63560ad9-ebfd-442e-8208-7d2f1fbd9491" />
 # Pixel Arcade
 
 Pixel Arcade is a solo number-guessing game with a retro arcade cabinet interface. Find the hidden whole number from **1 to 20** in **three tries**.

@@ -1,9 +1,10 @@
 const RECORDS_KEY = "pixelArcadeRecords";
 const SOUND_PREFERENCE_KEY = "pixelArcadeSoundEnabled";
+const RECORDS_VERSION = 3;
 const DIFFICULTIES = {
-  easy: { label: "Easy", maxNumber: 10, maxTries: 5 },
-  normal: { label: "Normal", maxNumber: 20, maxTries: 3 },
-  hard: { label: "Hard", maxNumber: 50, maxTries: 3 },
+  easy: { label: "Easy", maxNumber: 20, maxTries: 4, pointValue: 1 },
+  normal: { label: "Normal", maxNumber: 30, maxTries: 3, pointValue: 2 },
+  hard: { label: "Hard", maxNumber: 60, maxTries: 3, pointValue: 5 },
 };
 
 function createEmptyRecords() {
@@ -16,10 +17,14 @@ function createEmptyRecords() {
 }
 
 const ui = {
+  cabinet: document.querySelector(".cabinet"),
   startScreen: document.getElementById("start-screen"),
   gameScreen: document.getElementById("game-screen"),
   start: document.querySelector(".start"),
-  difficulty: document.getElementById("difficulty-select"),
+  difficultyTrigger: document.getElementById("difficulty-trigger"),
+  difficultyValue: document.getElementById("difficulty-value"),
+  difficultyMenu: document.getElementById("difficulty-menu"),
+  difficultyOptions: [...document.querySelectorAll("#difficulty-menu .difficulty-picker__option")],
   startIntro: document.getElementById("start-intro"),
   specRange: document.getElementById("spec-range"),
   specTries: document.getElementById("spec-tries"),
@@ -32,12 +37,13 @@ const ui = {
   hearts: document.getElementById("lives-icons"),
   attemptsLabel: document.getElementById("attempts-label"),
   possibleRange: document.getElementById("possible-range"),
+  rangeWindow: document.querySelector(".possible-range__window"),
   guessHistory: document.getElementById("guess-history"),
   result: document.getElementById("result-panel"),
   resultDifficultyTrigger: document.getElementById("result-difficulty-trigger"),
   resultDifficultyValue: document.getElementById("result-difficulty-value"),
   resultDifficultyMenu: document.getElementById("result-difficulty-menu"),
-  resultDifficultyOptions: [...document.querySelectorAll(".result-difficulty__option")],
+  resultDifficultyOptions: [...document.querySelectorAll("#result-difficulty-menu .difficulty-picker__option")],
   resultTitle: document.getElementById("result-title"),
   resultMode: document.getElementById("result-mode"),
   resultNumber: document.getElementById("result-number"),
@@ -47,6 +53,7 @@ const ui = {
   winStreak: document.getElementById("win-streak"),
   recordsStatus: document.getElementById("records-status"),
   soundToggle: document.getElementById("sound-toggle"),
+  soundToggleLabel: document.getElementById("sound-toggle-label"),
   soundStatus: document.getElementById("sound-status"),
 };
 
@@ -72,13 +79,35 @@ function getCurrentRecords() {
   return state.records[state.difficulty];
 }
 
+function maxModeScore(difficulty) {
+  return difficulty.maxTries * difficulty.pointValue;
+}
+
+function scoreRound() {
+  const difficulty = getDifficulty();
+  const triesUsed = state.guesses.length;
+  return (difficulty.maxTries + 1 - triesUsed) * difficulty.pointValue;
+}
+
 function getRandomNumber() {
   return Math.floor(Math.random() * getDifficulty().maxNumber) + 1;
 }
 
-function setStatus(message, status = "default") {
+function setStatus(message, status = "default", { direction = null, tone = null } = {}) {
   ui.value.textContent = message;
   ui.value.dataset.state = status;
+
+  if (direction) {
+    ui.value.dataset.direction = direction;
+  } else {
+    delete ui.value.dataset.direction;
+  }
+
+  if (tone) {
+    ui.value.dataset.tone = tone;
+  } else {
+    delete ui.value.dataset.tone;
+  }
 }
 
 function renderLives() {
@@ -107,7 +136,13 @@ function renderLives() {
 }
 
 function renderRoundInfo() {
-  ui.possibleRange.textContent = `${state.lowestPossible}—${state.highestPossible}`;
+  const maxNumber = getDifficulty().maxNumber;
+  const windowStart = ((state.lowestPossible - 1) / maxNumber) * 100;
+  const windowSize = ((state.highestPossible - state.lowestPossible + 1) / maxNumber) * 100;
+
+  ui.possibleRange.textContent = `${state.lowestPossible}-${state.highestPossible}`;
+  ui.rangeWindow.style.left = `${windowStart}%`;
+  ui.rangeWindow.style.width = `${windowSize}%`;
   ui.guessHistory.replaceChildren();
 
   if (state.guesses.length === 0) {
@@ -144,48 +179,101 @@ function updateDifficultyPreview() {
   setStatus(`Enter a whole number from 1 to ${difficulty.maxNumber}.`);
 }
 
-function updateResultDifficulty() {
-  ui.resultDifficultyValue.textContent = DIFFICULTIES[state.nextDifficulty].label;
-  ui.resultDifficultyOptions.forEach((option) => {
-    option.setAttribute("aria-selected", String(option.dataset.difficulty === state.nextDifficulty));
+function updateDifficultyPicker(valueElement, options, difficulty) {
+  valueElement.textContent = DIFFICULTIES[difficulty].label;
+  options.forEach((option) => {
+    option.setAttribute("aria-selected", String(option.dataset.difficulty === difficulty));
   });
 }
 
-function closeResultDifficultyMenu(returnFocus = false) {
-  ui.resultDifficultyMenu.hidden = true;
-  ui.resultDifficultyTrigger.setAttribute("aria-expanded", "false");
-  if (returnFocus) {
-    ui.resultDifficultyTrigger.focus();
-  }
-}
+function bindDifficultyPicker({ trigger, menu, options, valueElement, getValue, onSelect }) {
+  const close = (returnFocus = false) => {
+    menu.hidden = true;
+    trigger.setAttribute("aria-expanded", "false");
+    if (returnFocus) {
+      trigger.focus();
+    }
+  };
+  const focusOption = (index) => {
+    const wrappedIndex = (index + options.length) % options.length;
+    options[wrappedIndex].focus();
+  };
+  const open = () => {
+    menu.hidden = false;
+    trigger.setAttribute("aria-expanded", "true");
+    menu.dataset.placement = "bottom";
+    if (trigger.closest(".difficulty-picker--home")) {
+      const bounds = menu.getBoundingClientRect();
+      if (bounds.bottom > window.innerHeight - 8) {
+        menu.dataset.placement = "top";
+      }
+    }
+    options.find((option) => option.dataset.difficulty === getValue())?.focus();
+  };
+  const choose = (option) => {
+    const difficulty = option.dataset.difficulty;
+    if (!Object.hasOwn(DIFFICULTIES, difficulty)) {
+      throw new Error(`Unknown difficulty option: ${difficulty}`);
+    }
+    onSelect(difficulty);
+    updateDifficultyPicker(valueElement, options, difficulty);
+    close(true);
+  };
 
-function openResultDifficultyMenu() {
-  ui.resultDifficultyMenu.hidden = false;
-  ui.resultDifficultyTrigger.setAttribute("aria-expanded", "true");
-  const selectedOption = ui.resultDifficultyOptions.find(
-    (option) => option.dataset.difficulty === state.nextDifficulty,
-  );
-  selectedOption?.focus();
-}
+  trigger.addEventListener("click", () => {
+    if (menu.hidden) {
+      open();
+    } else {
+      close();
+    }
+  });
 
-function focusResultDifficultyOption(index) {
-  const wrappedIndex = (index + ui.resultDifficultyOptions.length) % ui.resultDifficultyOptions.length;
-  ui.resultDifficultyOptions[wrappedIndex].focus();
-}
+  trigger.addEventListener("keydown", (event) => {
+    if (["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key)) {
+      event.preventDefault();
+      open();
+    }
+  });
 
-function chooseResultDifficulty(option) {
-  const difficulty = option.dataset.difficulty;
-  if (!Object.hasOwn(DIFFICULTIES, difficulty)) {
-    throw new Error(`Unknown difficulty option: ${difficulty}`);
-  }
-  state.nextDifficulty = difficulty;
-  updateResultDifficulty();
-  closeResultDifficultyMenu(true);
+  menu.addEventListener("click", (event) => {
+    const option = event.target.closest(".difficulty-picker__option");
+    if (option) {
+      choose(option);
+    }
+  });
+
+  menu.addEventListener("keydown", (event) => {
+    const focusedIndex = options.indexOf(document.activeElement);
+    if (event.key === "Escape") {
+      event.preventDefault();
+      close(true);
+    } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      focusOption(focusedIndex + (event.key === "ArrowDown" ? 1 : -1));
+    } else if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      focusOption(event.key === "Home" ? 0 : options.length - 1);
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      const option = options[focusedIndex];
+      if (option) {
+        choose(option);
+      }
+    }
+  });
+
+  document.addEventListener("pointerdown", (event) => {
+    if (!menu.hidden && !trigger.closest(".difficulty-picker").contains(event.target)) {
+      close();
+    }
+  });
+
+  return close;
 }
 
 function updateSoundToggle() {
-  ui.soundToggle.textContent = state.soundEnabled ? "Sound on" : "Sound off";
-  ui.soundToggle.setAttribute("aria-pressed", String(state.soundEnabled));
+  ui.soundToggleLabel.textContent = state.soundEnabled ? "Sound on" : "Sound off";
+  ui.soundToggle.setAttribute("aria-checked", String(state.soundEnabled));
 }
 
 function loadSoundPreference() {
@@ -316,13 +404,15 @@ function showRecordsWarning() {
   ui.soundStatus.textContent = "Browser storage is unavailable. Personal records and sound preference may not be saved.";
 }
 
-function isValidRecord(record, maxTries) {
-  return record !== null
-    && typeof record === "object"
-    && (record.bestScore === null
-      || (Number.isInteger(record.bestScore) && record.bestScore >= 1 && record.bestScore <= maxTries))
-    && Number.isInteger(record.winStreak)
-    && record.winStreak >= 0;
+function sanitizeModeRecord(saved, difficulty) {
+  const bestScore = Number.isInteger(saved?.bestScore) && saved.bestScore >= 1
+    ? Math.min(saved.bestScore, maxModeScore(difficulty))
+    : null;
+  const winStreak = Number.isInteger(saved?.winStreak) && saved.winStreak > 0
+    ? saved.winStreak
+    : 0;
+
+  return { bestScore, winStreak };
 }
 
 function loadRecords() {
@@ -332,28 +422,35 @@ function loadRecords() {
       return;
     }
 
-    const records = JSON.parse(savedRecords);
-    if (
-      records?.version === 2
-      && records.modes !== null
-      && typeof records.modes === "object"
-      && Object.keys(DIFFICULTIES).every((difficulty) =>
-        isValidRecord(records.modes[difficulty], DIFFICULTIES[difficulty].maxTries))
-    ) {
-      state.records = records.modes;
-      return;
+    const parsed = JSON.parse(savedRecords);
+    const savedModes = parsed !== null && typeof parsed === "object"
+      ? parsed.modes !== null && typeof parsed.modes === "object"
+        ? parsed.modes
+        : "winStreak" in parsed
+          ? { normal: parsed }
+          : null
+      : null;
+
+    if (savedModes === null) {
+      throw new Error("Saved records have an invalid format.");
     }
 
-    if (isValidRecord(records, DIFFICULTIES.normal.maxTries)) {
-      state.records.normal = {
-        bestScore: records.bestScore,
-        winStreak: records.winStreak,
-      };
+    let changed = parsed.version !== RECORDS_VERSION;
+    const migrated = createEmptyRecords();
+
+    Object.keys(DIFFICULTIES).forEach((difficulty) => {
+      const sanitized = sanitizeModeRecord(savedModes[difficulty], DIFFICULTIES[difficulty]);
+      const previous = savedModes[difficulty];
+      if (previous?.bestScore !== sanitized.bestScore || previous?.winStreak !== sanitized.winStreak) {
+        changed = true;
+      }
+      migrated[difficulty] = sanitized;
+    });
+
+    state.records = migrated;
+    if (changed) {
       saveRecords();
-      return;
     }
-
-    throw new Error("Saved records have an invalid format.");
   } catch {
     showRecordsWarning();
   }
@@ -362,7 +459,7 @@ function loadRecords() {
 function saveRecords() {
   try {
     window.localStorage.setItem(RECORDS_KEY, JSON.stringify({
-      version: 2,
+      version: RECORDS_VERSION,
       modes: state.records,
     }));
     ui.recordsStatus.hidden = true;
@@ -374,17 +471,24 @@ function saveRecords() {
 function showResult(won) {
   const difficulty = getDifficulty();
   const triesUsed = state.guesses.length;
-  const score = difficulty.maxTries + 1 - triesUsed;
+  const score = scoreRound();
   const outcome = won ? "win" : "loss";
   const colors = ["#19a968", "#a9e8c7", "#f7c96d"];
 
   ui.result.dataset.outcome = outcome;
   ui.gameScreen.dataset.outcome = outcome;
   state.nextDifficulty = state.difficulty;
-  updateResultDifficulty();
+  updateDifficultyPicker(ui.resultDifficultyValue, ui.resultDifficultyOptions, state.nextDifficulty);
   ui.resultTitle.textContent = won ? "Round Complete" : "Round over";
   ui.resultMode.textContent = `${difficulty.label} mode`;
-  ui.resultNumber.textContent = `The number was ${state.select}`;
+
+  const numberLabel = document.createElement("span");
+  numberLabel.className = "result-panel__number-label";
+  numberLabel.textContent = "The number was ";
+  const numberValue = document.createElement("strong");
+  numberValue.className = "result-panel__number-value";
+  numberValue.textContent = String(state.select);
+  ui.resultNumber.replaceChildren(numberLabel, numberValue);
   ui.resultMessage.textContent = won
     ? `You found it in ${triesUsed} ${triesUsed === 1 ? "try" : "tries"} and scored ${score} ${score === 1 ? "point" : "points"}.`
     : "Better luck next round.";
@@ -434,10 +538,9 @@ function resetGame() {
 
 function endGame(won) {
   state.isGameOver = true;
-  const difficulty = getDifficulty();
   const records = getCurrentRecords();
   if (won) {
-    const score = difficulty.maxTries + 1 - state.guesses.length;
+    const score = scoreRound();
     records.winStreak += 1;
     if (records.bestScore === null || score > records.bestScore) {
       records.bestScore = score;
@@ -470,7 +573,7 @@ function focusGame() {
 }
 
 function startGame() {
-  state.difficulty = ui.difficulty.value;
+  ui.cabinet.dataset.screen = "game";
   updateDifficultyPreview();
   resetGame();
   ui.startScreen.hidden = true;
@@ -479,61 +582,32 @@ function startGame() {
 }
 
 ui.start.addEventListener("click", startGame);
-ui.difficulty.addEventListener("change", () => {
-  state.difficulty = ui.difficulty.value;
-  updateDifficultyPreview();
-  renderRecords();
-});
 ui.soundToggle.addEventListener("click", toggleSound);
 loadSoundPreference();
 updateSoundToggle();
 
-ui.resultDifficultyTrigger.addEventListener("click", () => {
-  if (ui.resultDifficultyMenu.hidden) {
-    openResultDifficultyMenu();
-  } else {
-    closeResultDifficultyMenu();
-  }
+bindDifficultyPicker({
+  trigger: ui.difficultyTrigger,
+  menu: ui.difficultyMenu,
+  options: ui.difficultyOptions,
+  valueElement: ui.difficultyValue,
+  getValue: () => state.difficulty,
+  onSelect: (difficulty) => {
+    state.difficulty = difficulty;
+    updateDifficultyPreview();
+    renderRecords();
+  },
 });
 
-ui.resultDifficultyTrigger.addEventListener("keydown", (event) => {
-  if (["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key)) {
-    event.preventDefault();
-    openResultDifficultyMenu();
-  }
-});
-
-ui.resultDifficultyMenu.addEventListener("click", (event) => {
-  const option = event.target.closest(".result-difficulty__option");
-  if (option) {
-    chooseResultDifficulty(option);
-  }
-});
-
-ui.resultDifficultyMenu.addEventListener("keydown", (event) => {
-  const focusedIndex = ui.resultDifficultyOptions.indexOf(document.activeElement);
-  if (event.key === "Escape") {
-    event.preventDefault();
-    closeResultDifficultyMenu(true);
-  } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-    event.preventDefault();
-    focusResultDifficultyOption(focusedIndex + (event.key === "ArrowDown" ? 1 : -1));
-  } else if (event.key === "Home" || event.key === "End") {
-    event.preventDefault();
-    focusResultDifficultyOption(event.key === "Home" ? 0 : ui.resultDifficultyOptions.length - 1);
-  } else if (event.key === "Enter" || event.key === " ") {
-    event.preventDefault();
-    const option = ui.resultDifficultyOptions[focusedIndex];
-    if (option) {
-      chooseResultDifficulty(option);
-    }
-  }
-});
-
-document.addEventListener("pointerdown", (event) => {
-  if (!ui.resultDifficultyMenu.hidden && !event.target.closest(".result-difficulty")) {
-    closeResultDifficultyMenu();
-  }
+const closeResultDifficultyMenu = bindDifficultyPicker({
+  trigger: ui.resultDifficultyTrigger,
+  menu: ui.resultDifficultyMenu,
+  options: ui.resultDifficultyOptions,
+  valueElement: ui.resultDifficultyValue,
+  getValue: () => state.nextDifficulty,
+  onSelect: (difficulty) => {
+    state.nextDifficulty = difficulty;
+  },
 });
 
 ui.result.addEventListener("cancel", (event) => {
@@ -581,9 +655,9 @@ ui.form.addEventListener("submit", (event) => {
   const result = guess < state.select ? "low" : "high";
   state.guesses.push({ number: guess, result });
   if (result === "low") {
-    state.lowestPossible = guess + 1;
+    state.lowestPossible = Math.max(state.lowestPossible, guess + 1);
   } else {
-    state.highestPossible = guess - 1;
+    state.highestPossible = Math.min(state.highestPossible, guess - 1);
   }
 
   state.attemptsLeft -= 1;
@@ -596,14 +670,15 @@ ui.form.addEventListener("submit", (event) => {
   }
 
   playSoundCue(result);
-  const clue = guess < state.select
-    ? "Too low. Try a higher number."
-    : "Too high. Try a lower number.";
-  setStatus(clue, "clue");
+  const clue = result === "low" ? `Higher than ${guess}` : `Lower than ${guess}`;
+  setStatus(clue, "clue", {
+    direction: result === "low" ? "up" : "down",
+    tone: state.attemptsLeft === 1 ? "urgent" : null,
+  });
 });
 
 ui.restart.addEventListener("click", () => {
   closeResultDifficultyMenu();
-  ui.difficulty.value = state.nextDifficulty;
+  state.difficulty = state.nextDifficulty;
   startGame();
 });

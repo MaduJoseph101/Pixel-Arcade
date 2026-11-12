@@ -7,10 +7,10 @@ Pixel Arcade is a solo number-guessing game with a clean, mobile-friendly puzzle
 
 ## How to play
 
-1. Choose **Easy**, **Normal**, or **Hard** on the start screen.
+1. Choose **Easy**, **Normal**, or **Hard** from the custom difficulty menu on the start screen.
 2. Select **Start Game**.
 3. Enter a whole number in the selected range, then select **Lock In Guess**.
-4. Use the higher or lower clue, remaining range, and guess history to narrow down the answer.
+4. Use the clue (which says whether the hidden number is higher or lower than your guess), remaining range, and guess history to narrow down the answer.
 5. Guess correctly to win. If you run out of tries, the game reveals the number.
 6. Choose the next round's difficulty from the custom menu in the result dialog, then select **Play Again**.
 
@@ -21,22 +21,24 @@ Repeated guesses are not accepted and do not use a try.
 - Responsive green-and-white puzzle interface for desktop and mobile.
 - Three difficulty modes:
 
-  | Mode | Number range | Tries |
-  | --- | ---: | ---: |
-  | Easy | 1–10 | 5 |
-  | Normal | 1–20 | 3 |
-  | Hard | 1–50 | 3 |
+  | Mode | Number range | Tries | Points per try | Best possible score |
+  | --- | ---: | ---: | ---: | ---: |
+  | Easy | 1–20 | 4 | 1 | 4 |
+  | Normal | 1–30 | 3 | 2 | 6 |
+  | Hard | 1–60 | 3 | 5 | 15 |
+
+  No mode can be won by rote: every range is wider than a perfect binary search can cover in the tries given, so even ideal play can miss.
 
 - Heart indicators and higher/lower clues.
 - A shrinking possible range and a history of guesses.
 - A result dialog for wins and losses, with the answer and score.
-- A custom difficulty menu in the result dialog for choosing the next round's mode; it supports keyboard navigation.
+- Matching custom difficulty menus on the start screen and result dialog; both support keyboard navigation.
 - Best score and consecutive win streak saved in the browser.
 - Optional sound effects, off by default, with the on/off preference saved in the browser.
 - Keyboard and screen-reader support, including a focused guess field and an accessible result dialog.
 - Reduced-motion support.
 
-The score is based on the number of tries used: each mode awards one point per unused try, plus one. The best score and win streak are tracked separately for each difficulty in the browser's local storage. Existing records are migrated to Normal mode. Records may not be available in private browsing or if browser storage is disabled.
+The score is based on the number of tries used: a win is worth one point per unused try, including the winning guess, multiplied by the mode's point value (Easy 1, Normal 2, Hard 5). A round costs the same points whether you win or lose, so the harder modes are the only place to build a big best score. The best score and win streak are tracked separately for each difficulty in the browser's local storage. Older records are migrated to Normal mode and to the new score scale. Records may not be available in private browsing or if browser storage is disabled.
 
 ## Run locally
 

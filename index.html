@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#f5faf7">
+    <meta name="theme-color" content="#1b8a56">
     <meta name="description" content="A quick solo number-guessing game with three difficulty modes.">
     <link rel="icon" type="image/svg+xml" href="favi.svg">
     <link rel="preload" href="fonts/Nunito-latin.woff2" as="font" type="font/woff2">
@@ -13,11 +13,14 @@
 <body>
     <!-- GAME CONTAINER -->
     <main class="arcade" aria-label="Guess My Number">
-        <section class="cabinet" aria-label="Guess My Number game">
+        <section class="cabinet" data-screen="start" aria-label="Guess My Number game">
             <header class="cabinet__header">
                 <p class="cabinet__brand">Pixel Arcade</p>
-                <button class="sound-toggle" id="sound-toggle" type="button" aria-label="Toggle sound effects" aria-pressed="false">
-                    Sound off
+                <button class="sound-toggle" id="sound-toggle" type="button" role="switch" aria-checked="false" aria-label="Sound effects">
+                    <span class="sound-toggle__track" aria-hidden="true">
+                        <span class="sound-toggle__knob"></span>
+                    </span>
+                    <span class="sound-toggle__label" id="sound-toggle-label">Sound off</span>
                 </button>
                 <span class="visually-hidden" id="sound-status" role="status" aria-live="polite"></span>
             </header>
@@ -32,21 +35,35 @@
 
                         <div class="mystery-display" aria-hidden="true">
                             <span class="mystery-display__number">?</span>
-                            <span class="mystery-display__label">Mystery<br>number</span>
+                            <span class="mystery-display__label">Mystery number</span>
                         </div>
 
                         <div class="start-screen__content">
                             <div class="game-specs" aria-label="Game rules and difficulty">
                                 <p><span>Range</span><strong id="spec-range">01–20</strong></p>
                                 <p><span>Tries</span><strong id="spec-tries">03</strong></p>
-                                <label class="game-specs__difficulty" for="difficulty-select">
+                                <div class="game-specs__difficulty">
                                     <span>Difficulty</span>
-                                    <select id="difficulty-select" class="difficulty-select">
-                                        <option value="easy">Easy</option>
-                                        <option value="normal" selected>Normal</option>
-                                        <option value="hard">Hard</option>
-                                    </select>
-                                </label>
+                                    <div class="difficulty-picker difficulty-picker--home">
+                                        <button
+                                            class="difficulty-picker__trigger"
+                                            id="difficulty-trigger"
+                                            type="button"
+                                            aria-label="Difficulty"
+                                            aria-haspopup="listbox"
+                                            aria-expanded="false"
+                                            aria-controls="difficulty-menu"
+                                        >
+                                            <span id="difficulty-value">Normal</span>
+                                            <span class="difficulty-picker__chevron" aria-hidden="true"></span>
+                                        </button>
+                                        <div class="difficulty-picker__menu" id="difficulty-menu" role="listbox" aria-label="Difficulty" hidden>
+                                            <button class="difficulty-picker__option" type="button" role="option" data-difficulty="easy" aria-selected="false" tabindex="-1">Easy</button>
+                                            <button class="difficulty-picker__option" type="button" role="option" data-difficulty="normal" aria-selected="true" tabindex="-1">Normal</button>
+                                            <button class="difficulty-picker__option" type="button" role="option" data-difficulty="hard" aria-selected="false" tabindex="-1">Hard</button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <button class="button button--primary start" type="button">Start game</button>
@@ -59,54 +76,60 @@
                     <div class="game-screen__layout">
                         <header class="game-screen__heading">
                             <div class="game-screen__heading-copy">
-                                <h2 id="gameplay-title">Make your guess</h2>
+                                <h2 id="gameplay-title">Make <span>your guess</span></h2>
                                 <p class="game-screen__prompt" id="game-prompt"></p>
+                                <div class="game-meta">
+                                    <section class="arcade-records" aria-label="Personal records">
+                                        <div class="arcade-record">
+                                            <span class="arcade-record__label">Best</span>
+                                            <p class="arcade-record__value"><output id="best-score">—</output><span>pts</span></p>
+                                        </div>
+                                        <div class="arcade-record arcade-record--streak">
+                                            <span class="arcade-record__label">Streak</span>
+                                            <p class="arcade-record__value"><output id="win-streak">0</output><span>wins</span></p>
+                                        </div>
+                                    </section>
+                                </div>
+                                <p class="records-status" id="records-status" role="status" aria-live="polite" hidden></p>
                             </div>
                         </header>
 
                         <section class="game-play" aria-label="Make a guess">
                             <div class="possible-range" aria-label="Possible number range">
                                 <span class="round-info__label">Possible numbers</span>
-                                <output class="possible-range__value" id="possible-range" aria-live="polite" aria-atomic="true">1—20</output>
-                            </div>
-
-                            <div class="lives" aria-label="Attempts remaining">
-                                <span class="lives__label">Tries left</span>
-                                <span class="lives__hearts" id="lives-icons" aria-hidden="true"></span>
-                                <span class="visually-hidden" id="attempts-label"></span>
+                                <output class="possible-range__value" id="possible-range" aria-live="polite" aria-atomic="true">1-30</output>
+                                <span class="possible-range__meter" aria-hidden="true">
+                                    <span class="possible-range__window"></span>
+                                </span>
                             </div>
 
                             <form class="guess-form" novalidate>
-                                <label for="guess-input">Your number</label>
+                                <div class="guess-form__head">
+                                    <label for="guess-input">Your number</label>
+                                    <div class="lives" aria-label="Attempts remaining">
+                                        <span class="lives__label">Tries left</span>
+                                        <span class="lives__hearts" id="lives-icons" aria-hidden="true"></span>
+                                        <span class="visually-hidden" id="attempts-label"></span>
+                                    </div>
+                                </div>
                                 <input
                                     type="number"
                                     class="input"
                                     id="guess-input"
                                     name="guess"
                                     min="1"
-                                    max="20"
+                                    max="30"
                                     step="1"
                                     inputmode="numeric"
                                     autocomplete="off"
                                     aria-describedby="guess-help"
                                 >
-                                <p class="value" id="guess-help" role="status" aria-live="polite" aria-atomic="true">Enter a whole number from 1 to 20.</p>
+                                <p class="value" id="guess-help" role="status" aria-live="polite" aria-atomic="true">Enter a whole number from 1 to 30.</p>
                                 <button class="button button--primary submit" type="submit">Lock in guess</button>
                             </form>
                         </section>
 
                         <aside class="game-side" aria-label="Round information">
-                            <section class="arcade-records" aria-label="Personal records">
-                                <div class="arcade-record">
-                                    <span class="arcade-record__label">Best score</span>
-                                    <p class="arcade-record__value"><output id="best-score">—</output><span>pts</span></p>
-                                </div>
-                                <div class="arcade-record arcade-record--streak">
-                                    <span class="arcade-record__label">Win streak</span>
-                                    <p class="arcade-record__value"><output id="win-streak">0</output><span>wins</span></p>
-                                </div>
-                            </section>
-                            <p class="records-status" id="records-status" role="status" aria-live="polite" hidden></p>
                             <section class="guess-history" aria-label="Your guesses">
                                 <span class="round-info__label">Your guesses</span>
                                 <ol class="guess-history__list" id="guess-history" aria-label="Guess history">
@@ -125,9 +148,9 @@
                             </div>
                             <div class="result-panel__difficulty" role="group" aria-labelledby="result-difficulty-label">
                                 <span id="result-difficulty-label">Next round difficulty</span>
-                                <div class="result-difficulty">
+                                <div class="difficulty-picker">
                                     <button
-                                        class="result-difficulty__trigger"
+                                        class="difficulty-picker__trigger"
                                         id="result-difficulty-trigger"
                                         type="button"
                                         aria-label="Next round difficulty"
@@ -136,12 +159,12 @@
                                         aria-controls="result-difficulty-menu"
                                     >
                                         <span id="result-difficulty-value">Normal</span>
-                                        <span class="result-difficulty__chevron" aria-hidden="true"></span>
+                                        <span class="difficulty-picker__chevron" aria-hidden="true"></span>
                                     </button>
-                                    <div class="result-difficulty__menu" id="result-difficulty-menu" role="listbox" aria-label="Next round difficulty" hidden>
-                                        <button class="result-difficulty__option" type="button" role="option" data-difficulty="easy" aria-selected="false" tabindex="-1">Easy</button>
-                                        <button class="result-difficulty__option" type="button" role="option" data-difficulty="normal" aria-selected="true" tabindex="-1">Normal</button>
-                                        <button class="result-difficulty__option" type="button" role="option" data-difficulty="hard" aria-selected="false" tabindex="-1">Hard</button>
+                                    <div class="difficulty-picker__menu" id="result-difficulty-menu" role="listbox" aria-label="Next round difficulty" hidden>
+                                        <button class="difficulty-picker__option" type="button" role="option" data-difficulty="easy" aria-selected="false" tabindex="-1">Easy</button>
+                                        <button class="difficulty-picker__option" type="button" role="option" data-difficulty="normal" aria-selected="true" tabindex="-1">Normal</button>
+                                        <button class="difficulty-picker__option" type="button" role="option" data-difficulty="hard" aria-selected="false" tabindex="-1">Hard</button>
                                     </div>
                                 </div>
                             </div>

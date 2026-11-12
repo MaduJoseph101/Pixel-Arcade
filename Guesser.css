@@ -1518,6 +1518,7 @@ button {
         width: 100%;
         min-height: clamp(58px, 7vh, 68px);
         border: 1px solid rgba(255, 255, 255, 0.35);
+        border-bottom: 7px solid rgba(0, 0, 0, 0.63);
         border-radius: 20px;
         background: linear-gradient(135deg, #16824e 0%, #0f6c3f 100%);
         color: #ffffff;
@@ -1702,6 +1703,7 @@ button {
     .guess-form .button {
         min-height: 54px;
         border: 1px solid rgba(255, 255, 255, 0.35);
+        border-bottom: 7px solid rgba(0, 0, 0, 0.63);
         border-radius: 18px;
         background: linear-gradient(135deg, #16824e 0%, #0f6c3f 100%);
         color: #ffffff;
